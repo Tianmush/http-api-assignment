@@ -1,13 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <title>Our simple HTTP server</title>
   <link rel="stylesheet" type="text/css" href="/style.css">
-  
+
   <script>
+    const handleResponse = async (response) => {
+      const acceptType = document.querySelector('#type').value;
+      const content = document.getElementById('content');
+      const message = document.getElementById('message');
+      const checkbox = document.getElementById('checkbox');
+
+      if (acceptType === 'application/json') {
+        const res = await response.json()
+
+        if (response.status === 200) {
+          content.innerHTML = `<b>Success</b>`;
+          message.innerHTML = `<div>Message: ${res.message}</div>`;
+        } else {
+          content.innerHTML = `<b>${res.id}</b>`;
+          message.innerHTML = `<div>Message: ${res.message}</div>`;
+        }
+      } else {
+        try {
+          const xmlText = await response.text();
+          const text = `${xmlText.slice(1, -1)}`
+
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(text, 'text/xml');
+
+          const messageElement = xmlDoc.querySelector('message');
+          const idElement = xmlDoc.querySelector('id');
+          if (response.status === 200) {
+            content.innerHTML = 'Success';
+            message.innerHTML = messageElement.textContent;
+          } else {
+            content.innerHTML = idElement.textContent;
+            message.innerHTML = messageElement.textContent;
+          }
+        } catch (e) {
+          console.log(e)
+        }
+      }
+    };
+
+    const sendFetch = async () => {
+      let url = document.querySelector('#page').value;
+      const acceptType = document.querySelector('#type').value;
+
+      const headers = {
+        'Accept': acceptType,
+      };
+
+      if (checkbox.checked) {
+        if (url === '/badRequest') {
+          url = url + '?valid=true'
+        } else if (url === '/unauthorized') {
+          url = url + '?loggedIn=true'
+        }
+      }
+
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+      });
+
+      handleResponse(response);
+    };
 
   </script>
 </head>
+
 <body>
   <section id="top">
     <h3>Status Code Tests</h3>
@@ -22,11 +86,14 @@
     </select>
     <select id="type">
       <option value="application/json">JSON</option>
-      <option value="text/xml">XML</option>
+      <option value="application/xml">XML</option>
     </select>
-    <button id="send">Send</button>
+    <button id="send" onclick="sendFetch()">Send</button>
+    <input id="checkbox" type="checkbox">add params</input>
   </section>
   <section id="content">
   </section>
+  <section id="message"></section>
 </body>
+
 </html>
